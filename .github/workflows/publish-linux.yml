@@ -1,0 +1,43 @@
+name: Publish Linux Binary
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+          include-prerelease: true
+
+      - name: Set Permissions
+        run: chmod -R +x Wabbajack.FileExtractor/Extractors
+
+      - name: Publish
+        run: dotnet publish Wabbajack.CLI/Wabbajack.CLI.csproj --runtime linux-x64 --configuration Release -p:PublishSingleFile=true --self-contained true -o ./publish
+
+      - name: List files
+        run: ls -l publish
+
+      - name: Test the binary
+        run: ./publish/wabbajack-cli --version
+
+      - name: Prepare package
+        run: |
+          cd publish
+          tar -czvf wabbajack-linux-x64.tar.gz wabbajack-cli
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: publish/wabbajack-linux-x64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
